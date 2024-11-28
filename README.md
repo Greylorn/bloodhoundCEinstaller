@@ -1,189 +1,205 @@
-# bloodhoundCEinstaller
-Bloodhound CE install script
-
-
-# BloodHound Community Edition (BHCE) Setup with Docker
+# BloodHound Community Edition (BHCE) Installer
 
 ## Overview
 
-This guide explains how to set up BloodHound Community Edition (BHCE) in a lab environment using Docker and Docker Compose. It includes instructions for installation, running the application, and retrieving the generated password. The application is accessible via the web interface at [http://192.168.56.177:8080/ui/login](http://192.168.56.177:8080/ui/login).
+This repository provides a script, `bloodhound.sh`, that automates the setup of **BloodHound Community Edition (BHCE)** in a lab environment using Docker and Docker Compose. The script handles the installation of required components, deployment of BHCE, and configuration to expose the application on your network.
+
+**Caution:** The script will open BloodHound to the network, making it accessible to other devices. Please use it carefully and ensure you're operating in a secure, controlled environment.
 
 ---
 
 ## Prerequisites
 
-Ensure the following are installed before proceeding:
+Before running the script, ensure you have:
 
-- A Docker-compatible container runtime (e.g., Docker Desktop or Podman with Docker compatibility enabled)
-- Docker Compose (included with Docker Desktop)
-
-To simplify installation on Linux/Mac, use Docker's `apt` repository as described in the installation steps below.
+- **A Linux-based operating system** (Tested on Ubuntu)
+- **Administrative privileges** (sudo access)
 
 ---
 
-## 1. Install Docker Engine and Docker Compose
+## What the Script Does
 
-Follow these steps to install Docker and Docker Compose on your system.
+The `bloodhound.sh` script automates the following steps:
 
-### Steps:
-
-1. **Add Docker's official GPG key and apt repository:**
-    
-    ```bash
-    sudo apt-get update
-    sudo apt-get install ca-certificates curl
-    sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-    sudo chmod a+r /etc/apt/keyrings/docker.asc
-    
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    sudo apt-get update
-    ```
-    
-2. **Install Docker Engine and Compose:**
-    
-    ```bash
-    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    ```
-    
-3. **Verify the installation:**
-    
-    ```bash
-    sudo docker run hello-world
-    ```
-    
+1. **Installs Docker Engine and Docker Compose**
+2. **Downloads the `docker-compose.yml` file for BHCE**
+3. **Modifies the configuration to expose BHCE on all network interfaces (`0.0.0.0`)**
+4. **Deploys the Docker stack**
+5. **Waits for the BHCE service to become available**
+6. **Retrieves the randomly generated admin password**
+7. **Sets up a `systemd` service for auto-start on boot**
 
 ---
 
-## 2. Deploy BloodHound Community Edition
+## Usage
 
-The simplest way to set up BHCE is to use the provided `docker-compose.yml` file.
-
-### Quick Start (One-Liner)
-
-For quick deployment, use the following one-line command:
+### 1. Clone the Repository
 
 ```bash
-curl -L https://ghst.ly/getbhce | docker compose -f - up
+git clone https://github.com/Greylorn/bloodhoundCEinstaller.git
 ```
 
-### Step-by-Step Deployment:
-
-1. **Download the Docker Compose file:**
-    
-    ```bash
-    curl -L https://ghst.ly/getbhce > docker-compose.yml
-    ```
-    
-2. **Pull and start the containers:**
-    
-    ```bash
-    docker compose pull
-    docker compose up
-    ```
-    
-3. **Retrieve the Admin Password:**
-    
-    - The admin password is **randomly generated** and displayed in the terminal output during the first run.
-    - **Run without `-d` initially:** This allows you to see the password directly in the terminal.
-        
-        ```bash
-        docker compose up
-        ```
-        
-    - **If already started in detached mode (`-d`):** Use the following command to view the logs and locate the password:
-        
-        ```bash
-        docker compose logs
-        ```
-        
-4. **Optional: Start in Detached Mode** Once you have the password, you can start the containers in the background for future use:
-    
-    ```bash
-    docker compose up -d
-    ```
-    
-
----
-
-## 3. Resetting the Password
-
-If the password is lost, it cannot be regenerated. To reset the password:
-
-1. Stop and remove all containers and volumes:
-    
-    ```bash
-    docker compose down -v
-    ```
-    
-2. Restart the stack to generate a new password:
-    
-    ```bash
-    docker compose up
-    ```
-    
-
----
-
-## 4. Access the Application
-
-1. Open a browser and navigate to: [http://192.168.56.177:8080/ui/login](http://192.168.56.177:8080/ui/login)
-2. Log in with:
-    - **Username:** `admin`
-    - **Password:** The randomly generated password retrieved from the logs.
-
----
-
-## 5. Systemd Auto-Start Configuration
-
-To ensure the Docker Compose stack starts automatically on boot, configure a `systemd` service.
-
-### One-Liner Setup:
-
-Run the following to create the service file, reload systemd, and start the service:
+### 2. Navigate to the Repository Directory
 
 ```bash
-sudo bash -c 'cat > /etc/systemd/system/docker-compose-app.service <<EOF
-[Unit]
-Description=Docker Compose Application Service
-Documentation=https://docs.docker.com/compose/
-After=network.target docker.service
-Requires=docker.service
+cd bloodhoundCEinstaller
+```
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/root
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-TimeoutStartSec=0
+### 3. Make the Script Executable
 
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload && systemctl enable docker-compose-app.service && systemctl start docker-compose-app.service'
+```bash
+chmod +x bloodhound.sh
+```
+
+### 4. Run the Script with Administrative Privileges
+
+```bash
+sudo ./bloodhound.sh
 ```
 
 ---
 
-## 6. Additional Notes
+## Accessing BloodHound
 
-- The provided Docker Compose file binds the application to `localhost`. To expose it to other devices on your network, modify the `docker-compose.yml` file and change the host binding (e.g., from `127.0.0.1` to `0.0.0.0`).
-- Verify container status with:
-    
-    ```bash
-    docker ps
-    ```
-    
-- To manually stop and remove containers:
-    
-    ```bash
-    docker compose down
-    ```
-    
+1. **Retrieve the Local IP Address**
+
+   The script will display your local IP address upon completion. If needed, you can manually find it using:
+
+   ```bash
+   hostname -I | awk '{print $1}'
+   ```
+
+2. **Open a Browser and Navigate to:**
+
+   ```
+   http://[your-server-ip]:8080/ui/login
+   ```
+
+3. **Log in with:**
+
+   - **Username:** `admin`
+   - **Password:** The randomly generated password displayed by the script.
 
 ---
+
+## Important Notes
+
+- **Network Exposure:**
+
+  - The script modifies the `docker-compose.yml` file to bind BHCE to `0.0.0.0`, exposing it on all network interfaces. Ensure that your environment is secure and that you understand the implications of exposing BHCE on your network.
+
+- **Password Retrieval:**
+
+  - The admin password is **randomly generated** and displayed by the script. Make sure to save this password securely.
+
+- **Systemd Service:**
+
+  - A `systemd` service named `docker-compose-app.service` is created to ensure BHCE starts automatically on boot.
+
+---
+
+## Manual Installation Steps (Optional)
+
+If you prefer to install and configure BHCE manually, you can follow these steps:
+
+### 1. Install Docker Engine and Docker Compose
+
+Follow these commands to install Docker and Docker Compose:
+
+```bash
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo docker run hello-world
+```
+
+### 2. Deploy BloodHound Community Edition
+
+#### Download the Docker Compose File:
+
+```bash
+curl -L https://ghst.ly/getbhce > docker-compose.yml
+```
+
+#### Modify the Configuration to Expose BHCE:
+
+Edit the `docker-compose.yml` file and change the host binding from `127.0.0.1` to `0.0.0.0`:
+
+```yaml
+services:
+  bloodhound:
+    ports:
+      - "8080:8080"
+```
+
+#### Pull and Start the Containers:
+
+```bash
+docker compose pull
+docker compose up
+```
+
+#### Retrieve the Admin Password:
+
+- The admin password is **randomly generated** and displayed in the terminal output during the first run.
+
+#### Start in Detached Mode (Optional):
+
+```bash
+docker compose up -d
+```
+
+---
+
+## Resetting the Password
+
+If you lose the password, it cannot be regenerated. To reset the password:
+
+1. **Stop and Remove All Containers and Volumes:**
+
+   ```bash
+   docker compose down -v
+   ```
+
+2. **Restart the Stack to Generate a New Password:**
+
+   ```bash
+   docker compose up
+   ```
+
+---
+
+## Verifying Installation
+
+- **Check Container Status:**
+
+  ```bash
+  docker ps
+  ```
+
+- **View Logs:**
+
+  ```bash
+  docker compose logs
+  ```
+
+- **Manually Stop and Remove Containers:**
+
+  ```bash
+  docker compose down -v
+  ```
+
+---
+
+**Disclaimer:** This setup is intended for educational and testing purposes in a controlled lab environment. Always ensure you have proper authorization before deploying or testing in a production environment.
