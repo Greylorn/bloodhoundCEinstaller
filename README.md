@@ -12,7 +12,7 @@ This repository provides a script, `bloodhound.sh`, that automates the setup of 
 
 Before running the script, ensure you have:
 
-- **A Linux-based operating system** (Tested on Ubuntu)
+- **A Linux-based operating system** (Tested on  Ubuntu 20.04 LTS)
 - **Administrative privileges** (sudo access)
 
 ---
