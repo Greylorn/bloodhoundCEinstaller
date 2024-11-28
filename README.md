@@ -68,6 +68,10 @@ sudo ./bloodhound.sh
    ```bash
    hostname -I | awk '{print $1}'
    ```
+   or
+   ```bash
+   ip a
+   ```
 
 2. **Open a Browser and Navigate to:**
 
